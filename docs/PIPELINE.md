@@ -30,7 +30,7 @@ reproduce the frozen 637-feature baseline.
 
 ```bash
 python -m pip install -r requirements.txt
-python candidate_7010/run.py \
+python run.py \
   --data /path/to/official-competition-data \
   --output submission_candidate_7010.csv
 ```
@@ -38,7 +38,7 @@ python candidate_7010/run.py \
 Optional: save all intermediate candidate test probabilities for reproducibility:
 
 ```bash
-python candidate_7010/run.py \
+python run.py \
   --data /path/to/official-competition-data \
   --output submission_candidate_7010.csv \
   --probabilities candidate_7010_probabilities.csv
@@ -82,7 +82,7 @@ For an end-to-end reproducibility check, generate a fresh submission and
 compare it to a locally archived reference CSV:
 
 ```bash
-python candidate_7010/check_submission.py \
+python scripts/check_submission.py \
   --reference /path/to/archived/submission_candidate_7010.csv \
   --candidate submission_candidate_7010.csv
 ```

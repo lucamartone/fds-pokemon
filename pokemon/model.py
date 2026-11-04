@@ -12,11 +12,11 @@ import pandas as pd
 from catboost import CatBoostClassifier
 from xgboost import XGBClassifier
 
-from pokemon.features import build_frame, load_type_chart, read_jsonl
-from pokemon.features2 import build_dex, build_extras
-from pokemon.features3 import build3
-from pokemon.features4 import cand_lists, feats4, pool_matrix
-from pokemon.te import team_keys
+from pokemon.features.base import build_frame, load_type_chart, read_jsonl
+from pokemon.features.resources import build_dex, build_extras
+from pokemon.features.battle import build3
+from pokemon.features.matchups import cand_lists, feats4, pool_matrix
+from pokemon.encoding import team_keys
 
 SEED = 42
 MODEL_NAMES = ("lgb", "xgb", "cat")

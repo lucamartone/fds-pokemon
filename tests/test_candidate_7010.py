@@ -8,16 +8,16 @@ import unittest
 import numpy as np
 import pandas as pd
 
-from candidate_7010.active_utility_features import (
+from pokemon.features.utility import (
     COLUMNS as UTILITY_COLUMNS,
     make_frame as utility_frame,
 )
-from candidate_7010.compact_features import row as compact_row
-from candidate_7010.observed_move_features import (
+from pokemon.features.compact import row as compact_row
+from pokemon.features.offense import (
     CATEGORIES,
     make_frame as observed_frame,
 )
-from candidate_7010.speed_features import (
+from pokemon.features.speed import (
     COLUMNS as SPEED_COLUMNS,
     make_frame as speed_frame,
 )

@@ -6,7 +6,7 @@ metadata. Species base statistics and types come from competition data.
 
 import numpy as np
 
-from pokemon.features import type_mult
+from pokemon.features.base import type_mult
 
 
 STATUS_COST = {

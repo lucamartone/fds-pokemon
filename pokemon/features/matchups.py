@@ -9,7 +9,7 @@ from collections import Counter
 
 import numpy as np
 
-from pokemon.features import STATS, type_mult
+from pokemon.features.base import STATS, type_mult
 
 
 # Pokemon whose probability of being among P2's unseen members is exposed as a feature

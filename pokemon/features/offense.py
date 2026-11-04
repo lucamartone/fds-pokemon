@@ -6,7 +6,7 @@ actually used by the active species during the observed turns are considered.
 
 import pandas as pd
 
-from pokemon.features import type_mult
+from pokemon.features.base import type_mult
 
 
 CATEGORIES = ["active_p1", "active_p2", "active_type_matchup"]

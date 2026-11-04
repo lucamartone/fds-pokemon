@@ -5,7 +5,7 @@ Example:
         --output submissions/submission_candidate_7010.csv
 """
 
-from candidate_7010.run import main
+from pokemon.pipeline import main
 
 
 if __name__ == "__main__":

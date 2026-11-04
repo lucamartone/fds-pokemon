@@ -29,15 +29,15 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from pokemon.features import load_type_chart, read_jsonl
-from pokemon.features2 import build_dex
-from pokemon.main import build_all, make_model
-from pokemon.te import oof_te2
+from pokemon.features.base import load_type_chart, read_jsonl
+from pokemon.features.resources import build_dex
+from pokemon.model import build_all, make_model
+from pokemon.encoding import oof_te2
 
-from candidate_7010.active_utility_features import make_frame as utility_frame
-from candidate_7010.compact_features import row as compact_row
-from candidate_7010.observed_move_features import CATEGORIES, make_frame as observed_frame
-from candidate_7010.speed_features import make_frame as speed_frame
+from pokemon.features.utility import make_frame as utility_frame
+from pokemon.features.compact import row as compact_row
+from pokemon.features.offense import CATEGORIES, make_frame as observed_frame
+from pokemon.features.speed import make_frame as speed_frame
 
 
 def make_catboost(cat_features: list[str]) -> CatBoostClassifier:
