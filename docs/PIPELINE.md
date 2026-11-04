@@ -1,6 +1,6 @@
 # Candidate 7010 — reproducible Pokémon Gen 2 outcome classifier
 
-This directory contains the **frozen competition candidate** whose exploratory
+This document describes the **frozen competition candidate** whose exploratory
 five-fold out-of-fold (OOF) accuracy was **70.10%** (7,010/10,000). This is
 **not** a verified public or private Kaggle score. The last reported public
 result for an earlier candidate was 0.69866.
@@ -16,7 +16,7 @@ result for an earlier candidate was 0.69866.
   inspect future turns or final outcomes while encoding an individual test row.
 - **No external knowledge:** no Smogon statistics, external Pokédex tables,
   replay collections, manually assembled species databases or outside labels.
-- **Label safety:** `pokemon.te.oof_te2` uses inner-fold target statistics to
+- **Label safety:** `pokemon.encoding.oof_te2` uses inner-fold target statistics to
   encode train rows; test rows are encoded from train labels only.
 - **Preserve identifiers:** predictions follow the official sample submission
   schema and `battle_id` order.
@@ -25,8 +25,9 @@ result for an earlier candidate was 0.69866.
 
 ## Run from a fresh clone
 
-The source relies on the repository's original `pokemon/` modules, which
-reproduce the frozen 637-feature baseline.
+The maintained `pokemon/` package contains the feature extraction, cross-fitted
+encoding, model configuration, and the full training pipeline. The frozen
+637-feature baseline is preserved in `pokemon/model.py`.
 
 ```bash
 python -m pip install -r requirements.txt
@@ -90,4 +91,4 @@ python scripts/check_submission.py \
 The competition organizers also require a **public Kaggle notebook** that
 clones the GitHub repository and generates the final three selected submissions.
 That notebook and the **final methodological report are separate deliverables**;
-the final report is intentionally not included in this pull request.
+the final report is intentionally not included in this repository.
