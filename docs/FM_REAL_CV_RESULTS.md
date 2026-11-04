@@ -35,6 +35,8 @@ An independent 713-feature match-state LightGBM model was prototyped using only 
 
 For the team-rating model, statistics use only the outer training labels; inner 5-fold cross-fitting prevents the training row's label from entering its own encoding. The opponent candidates are derived from unlabeled team identities in the organizer's train/test inputs. The best blend was selected after checking several weights on the same OOF predictions, so 69.11% is **exploratory**, not a fresh or unbiased test score.
 
+The chosen exploratory 69.11% blend corrected 207 errors made by the standalone team-rating model and introduced 181 new errors, for a net 26 extra correct battles. The exact McNemar/binomial discordance test gives p≈0.204, providing no strong evidence of generalization gain. Its five fold accuracies were 69.80%, 68.90%, 69.25%, 69.35%, and 68.25%.
+
 ### Interpretation
 
 No newly tested model exceeded 70%. The historical 69.72% Kaggle OOF baseline is **not** a same-process paired comparator; no claim of measurable improvement over it can be made. Do **not** replace the three existing competition submissions on the basis of these experiments.
