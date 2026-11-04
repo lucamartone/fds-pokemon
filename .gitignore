@@ -1,7 +1,15 @@
 __pycache__/
 *.pyc
+.pytest_cache/
 .ipynb_checkpoints/
 catboost_info/
+
+# Competition inputs and generated artifacts
 *.jsonl
 /data/
 *.joblib
+*.oof.csv.gz
+/submissions/
+/candidate_7010/*.csv
+/candidate_7010/*.json
+/run_manifest.json

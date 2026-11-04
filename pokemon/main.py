@@ -1,16 +1,7 @@
-"""Training, leakage-safe validation, and Kaggle submission generation.
+"""Core feature matrices and base estimators for candidate 7010.
 
-All supervised estimators are trained exclusively on ``train.jsonl`` labels.
-Team target statistics are cross-fitted within each training fold to prevent
-outcome leakage into either training features or validation predictions.
-
-The submission variants were selected using stratified five-fold validation:
-
-    sub1_lgbm:        LightGBM alone.
-    sub2_lgb_xgb:     Equal-probability blend of LightGBM and XGBoost.
-    sub3_lgb_xgb_cat: LightGBM/XGBoost/CatBoost blend (45%/45%/10%).
-
-Do not use the competition test outcomes or public leaderboard to tune features.
+Only organizer-provided data and observed first-30-turn states are used.
+The canonical submission command is `python run.py`.
 """
 
 from pathlib import Path
@@ -19,25 +10,16 @@ import lightgbm as lgb
 import numpy as np
 import pandas as pd
 from catboost import CatBoostClassifier
-from sklearn.model_selection import StratifiedKFold
 from xgboost import XGBClassifier
 
 from pokemon.features import build_frame, load_type_chart, read_jsonl
 from pokemon.features2 import build_dex, build_extras
 from pokemon.features3 import build3
 from pokemon.features4 import cand_lists, feats4, pool_matrix
-from pokemon.te import oof_te2, team_keys
-
+from pokemon.te import team_keys
 
 SEED = 42
 MODEL_NAMES = ("lgb", "xgb", "cat")
-
-# Positive weights are probability averaging coefficients, not voting weights.
-VARIANTS = {
-    "sub1_lgbm": {"lgb": 1.0},
-    "sub2_lgb_xgb": {"lgb": 0.50, "xgb": 0.50},
-    "sub3_lgb_xgb_cat": {"lgb": 0.45, "xgb": 0.45, "cat": 0.10},
-}
 
 
 def build_all(data_dir):
@@ -179,152 +161,3 @@ def make_model(name, seed=SEED):
         )
 
     raise ValueError(f"Unknown model: {name!r}. Expected one of {MODEL_NAMES}.")
-
-
-def blend_probabilities(predictions, weights):
-    """Compute a normalized weighted average of calibrated class-1 probabilities.
-
-    Parameters
-    ----------
-    predictions : dict[str, numpy.ndarray]
-        Predicted class-1 probabilities, keyed by model name.
-    weights : dict[str, float]
-        Non-negative model coefficients that sum to one.
-
-    Returns
-    -------
-    numpy.ndarray
-        Ensemble class-1 probabilities with the original row order preserved.
-    """
-    if not weights or not np.isclose(sum(weights.values()), 1.0):
-        raise ValueError("Ensemble weights must sum to 1.0.")
-
-    return sum(weight * predictions[name] for name, weight in weights.items())
-
-
-def cross_validate(data, n_splits=5):
-    """Estimate held-out accuracy with strictly nested team target encoding.
-
-    Each of the ``n_splits`` validation folds is never used to fit that fold's
-    predictors or to compute its target-encoding statistics. The inner K-fold
-    encoder also excludes the outcome of each row it encodes for training.
-
-    Returns
-    -------
-    dict[str, float]
-        Out-of-fold accuracies of base estimators and submission variants.
-    """
-    A, y = data["A"], data["y"]
-    n_train = len(y)
-
-    predictions = {name: np.zeros(n_train) for name in MODEL_NAMES}
-    outer_cv = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=SEED)
-
-    for train_idx, validation_idx in outer_cv.split(A, y):
-        # --- Fit supervised target encoders exclusively on outer train rows.
-        enc_train, enc_validation = oof_te2(
-            data["k1"], data["k2"], y, data["keys"], data["C"],
-            train_idx, validation_idx,
-        )
-
-        X_train = pd.concat([
-            A.iloc[train_idx].reset_index(drop=True), enc_train,
-        ], axis=1)
-        X_validation = pd.concat([
-            A.iloc[validation_idx].reset_index(drop=True), enc_validation,
-        ], axis=1)
-
-        # --- Save probabilities only for the untouched outer validation rows.
-        for name in MODEL_NAMES:
-            estimator = make_model(name)
-            estimator.fit(X_train, y[train_idx])
-            predictions[name][validation_idx] = estimator.predict_proba(X_validation)[:, 1]
-
-    scores = {
-        name: float(np.mean((probabilities > 0.5) == y))
-        for name, probabilities in predictions.items()
-    }
-
-    for name, weights in VARIANTS.items():
-        probabilities = blend_probabilities(predictions, weights)
-        scores[name] = float(np.mean((probabilities > 0.5) == y))
-
-    return scores
-
-
-def _final_matrices(data):
-    """Create full-train and test matrices with non-leaking target encodings."""
-    A, B, y = data["A"], data["B"], data["y"]
-    n_train = len(y)
-
-    # --- Training rows use inner out-of-fold values; test rows use all labels.
-    enc_train, enc_test = oof_te2(
-        data["k1"], data["k2"], y, data["keys"], data["C"],
-        np.arange(n_train), np.arange(n_train, n_train + len(B)),
-    )
-
-    X_train = pd.concat([A.reset_index(drop=True), enc_train], axis=1)
-    X_test = pd.concat([B.reset_index(drop=True), enc_test], axis=1)
-
-    return X_train, X_test
-
-
-def _write_submission(ids, probabilities, output_path):
-    """Write binary predictions while retaining their original battle IDs."""
-    submission = pd.DataFrame({
-        "battle_id": ids,
-        "player_won": (np.asarray(probabilities) > 0.5).astype(int),
-    })
-    submission.to_csv(output_path, index=False)
-
-
-def make_submission(data, name, out_dir):
-    """Fit only the estimators needed for one selected Kaggle submission."""
-    if name not in VARIANTS:
-        raise ValueError(f"Unknown submission: {name!r}.")
-
-    output_dir = Path(out_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
-    X_train, X_test = _final_matrices(data)
-
-    # --- Generate each base estimator's probability exactly once.
-    probabilities = {}
-    for model_name in VARIANTS[name]:
-        estimator = make_model(model_name)
-        estimator.fit(X_train, data["y"])
-        probabilities[model_name] = estimator.predict_proba(X_test)[:, 1]
-
-    output_path = output_dir / f"{name}.csv"
-    _write_submission(
-        data["ids"], blend_probabilities(probabilities, VARIANTS[name]), output_path,
-    )
-
-    return str(output_path)
-
-
-def make_submissions(data, out_dir):
-    """Train each estimator once and regenerate all three final submissions.
-
-    Returns
-    -------
-    dict[str, str]
-        Mapping from the submission variant to its output CSV path.
-    """
-    output_dir = Path(out_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
-    X_train, X_test = _final_matrices(data)
-
-    # --- Reuse identical fitted models across the three ensemble variants.
-    probabilities = {}
-    for name in MODEL_NAMES:
-        estimator = make_model(name)
-        estimator.fit(X_train, data["y"])
-        probabilities[name] = estimator.predict_proba(X_test)[:, 1]
-
-    paths = {}
-    for variant, weights in VARIANTS.items():
-        path = output_dir / f"{variant}.csv"
-        _write_submission(data["ids"], blend_probabilities(probabilities, weights), path)
-        paths[variant] = str(path)
-
-    return paths

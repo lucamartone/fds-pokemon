@@ -34,10 +34,10 @@ from pokemon.features2 import build_dex
 from pokemon.main import build_all, make_model
 from pokemon.te import oof_te2
 
-from active_utility_features import make_frame as utility_frame
-from compact_features import row as compact_row
-from observed_move_features import CATEGORIES, make_frame as observed_frame
-from speed_features import make_frame as speed_frame
+from candidate_7010.active_utility_features import make_frame as utility_frame
+from candidate_7010.compact_features import row as compact_row
+from candidate_7010.observed_move_features import CATEGORIES, make_frame as observed_frame
+from candidate_7010.speed_features import make_frame as speed_frame
 
 
 def make_catboost(cat_features: list[str]) -> CatBoostClassifier:
