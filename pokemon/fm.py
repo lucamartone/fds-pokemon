@@ -72,8 +72,8 @@ def battle_fm_features(battle):
 class LogisticFM:
     """Sparse second-order FM, logistic loss, L2 penalty, L-BFGS-B optimizer."""
     rank: int = 8
-    reg_linear: float = 0.001
-    reg_latent: float = 0.0005
+    reg_linear: float = 0.01
+    reg_latent: float = 0.01
     maxiter: int = 125
     seed: int = 42
 
