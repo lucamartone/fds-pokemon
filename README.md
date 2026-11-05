@@ -42,13 +42,25 @@ The `--data` directory must contain the organizer's `train.jsonl`, `test.jsonl`,
 
 ```bash
 python run.py --data /path/to/official-data \
-  --output submissions/submission.csv
+  --output-dir submissions
 ```
 
-The script retrains every base and expert estimator from scratch and writes
-exactly one Kaggle-compatible submission. No archived predictions or labels
-from the competition test set are needed. Training can be computationally
-expensive.
+One run writes **three Kaggle-compatible files**, each generated from the same
+training session:
+
+```text
+submissions/
+  submission_1_offense.csv    Observed-offense ensemble (70.01% exploratory CV)
+  submission_2_full.csv       Full boosted baseline (70.10% exploratory CV)
+  submission_3_consensus.csv  Unanimous-expert ensemble (70.17% exploratory CV)
+```
+
+The first two predictions are intermediate blends from the same baseline
+training; the three additional experts are trained once and shared with the
+consensus output. No archived predictions, external labels or test outcomes
+are used. Training is computationally expensive. The historical public Kaggle
+score for the offense ensemble was 69.866%, for the full baseline 69.733%,
+and the public consensus score has not been verified.
 
 ```bash
 python -m unittest discover -s tests -p 'test_*.py' -v
@@ -59,7 +71,7 @@ To compare two independently generated submissions:
 ```bash
 python scripts/check_submission.py \
   --reference /path/to/reference.csv \
-  --candidate submissions/submission.csv
+  --candidate submissions/submission_3_consensus.csv
 ```
 
 ## Project layout
@@ -80,11 +92,12 @@ pokemon/
   model.py           Baseline feature matrices and estimators
   pipeline.py        Frozen baseline prediction probabilities
   hybrid.py          Hybrid expert model configuration
-  consensus.py       Consensus training, confidence gate and submission
+  consensus.py       Shared fitting, confidence gate and three submissions
 notebooks/kaggle_notebook.ipynb
 scripts/check_submission.py
 tests/test_features.py
 tests/test_consensus.py
+tests/test_symmetric.py
 docs/PIPELINE.md
 run.py
 requirements.txt

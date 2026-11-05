@@ -2,7 +2,7 @@
 
 Example:
     python run.py --data /path/to/official-data \
-        --output submissions/submission.csv
+        --output-dir submissions
 """
 
 from pokemon.consensus import main

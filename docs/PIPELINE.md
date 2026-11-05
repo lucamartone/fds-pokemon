@@ -56,19 +56,22 @@ signal. The consensus code does **not** claim to reconstruct that file.
 python -m pip install -r requirements.txt
 python -m unittest discover -s tests -p 'test_*.py' -v
 python run.py --data /path/to/official-data \
-  --output submissions/submission.csv
+  --output-dir submissions
 ```
 
-The generated CSV is checked against the official sample for column names,
-row order and IDs. Every estimator is refit; no model binary, cached predictions
-or external dataset is required. The training process is compute intensive.
+The same full training run produces three independent, Kaggle-ready CSV files:
+`submission_1_offense.csv`, `submission_2_full.csv` and
+`submission_3_consensus.csv` in the requested output directory. The first two
+are frozen intermediate blends and require no extra training. All three files
+are independently validated against the official sample, including the IDs.
+No cached test predictions or external dataset is required. Training is
+compute intensive.
 
 The notebook `notebooks/kaggle_notebook.ipynb` clones the repository, installs
-pinned requirements, locates the organizer's mounted files and invokes the
-same root entrypoint. The competition requires three selected final
-submissions; selection and reproducibility of those three files is a
-**separate outstanding deliverable** and should not be claimed completed by
-this single-model notebook.
+pinned requirements, locates the organizer's mounted files, calls the same
+root entrypoint once, and independently checks **all three generated CSVs**.
+A full end-to-end run must still be confirmed in the final Kaggle environment
+before claiming formal competition reproducibility.
 
 ## Data safety
 

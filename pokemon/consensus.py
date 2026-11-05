@@ -219,52 +219,130 @@ def apply_unanimity_gate(
     return predicted
 
 
-def main() -> None:
-    """Fit all models from official files and write the Kaggle submission."""
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--data", type=Path, required=True)
-    parser.add_argument(
-        "--output", type=Path, default=Path("submissions/submission.csv")
-    )
-    args = parser.parse_args()
+SUBMISSION_FILES = (
+    "submission_1_offense.csv",
+    "submission_2_full.csv",
+    "submission_3_consensus.csv",
+)
 
-    data_dir = args.data.resolve()
-    for name in (
-        "train.jsonl", "test.jsonl",
-        "type_chart_gen2.csv", "sample_submission.csv",
+
+def assemble_submissions(
+    baseline_probabilities: pd.DataFrame,
+    expert_ids: np.ndarray,
+    roster: np.ndarray,
+    hybrid: np.ndarray,
+    symmetric: np.ndarray,
+) -> dict[str, pd.DataFrame]:
+    """Create all selected submissions from one set of trained predictions.
+
+    The baseline produces both intermediate blends during the same fit.
+    The independent experts are shared with the final consensus output.
+    No predictions are used as training targets or lookup-table replacements.
+    """
+    required_columns = {"battle_id", "candidate_7001", "candidate_7010"}
+    missing = required_columns.difference(baseline_probabilities.columns)
+    if missing:
+        raise ValueError(f"Missing baseline probability columns: {sorted(missing)}")
+
+    ids = np.asarray(expert_ids)
+    original_ids = baseline_probabilities["battle_id"].to_numpy()
+    if ids.ndim != 1 or not np.array_equal(original_ids, ids):
+        raise ValueError("Baseline and expert test IDs are not aligned")
+
+    offense = baseline_probabilities["candidate_7001"].to_numpy(dtype=float)
+    full = baseline_probabilities["candidate_7010"].to_numpy(dtype=float)
+    expert_predictions = (
+        np.asarray(roster, dtype=float),
+        np.asarray(hybrid, dtype=float),
+        np.asarray(symmetric, dtype=float),
+    )
+    for name, values in zip(
+        ("offense", "full", "roster", "hybrid", "symmetric"),
+        (offense, full, *expert_predictions),
     ):
+        if values.ndim != 1 or len(values) != len(ids):
+            raise ValueError(f"Invalid prediction dimensions for {name}")
+        if not np.isfinite(values).all() or np.any((values < 0) | (values > 1)):
+            raise ValueError(f"Invalid probabilities for {name}")
+
+    labels = (
+        (offense > 0.5).astype(int),
+        (full > 0.5).astype(int),
+        apply_unanimity_gate(full, *expert_predictions),
+    )
+    return {
+        name: pd.DataFrame({"battle_id": ids, "player_won": target})
+        for name, target in zip(SUBMISSION_FILES, labels)
+    }
+
+
+def train_selected_submissions(data_dir: Path) -> dict[str, pd.DataFrame]:
+    """Fit the baseline once and the three additional experts once each."""
+    required_files = (
+        "train.jsonl", "test.jsonl", "type_chart_gen2.csv",
+        "sample_submission.csv",
+    )
+    for name in required_files:
         if not (data_dir / name).is_file():
             raise FileNotFoundError(data_dir / name)
 
-    # Refit the frozen baseline ensemble using only the official data.
-    # Do not load archived predictions or a previous test submission.
+    # A single baseline fit already computes the offense and full blends.
     _, baseline_probabilities = train_and_predict(data_dir)
-    # Historical probability key retained to preserve baseline reproducibility.
-    base = baseline_probabilities["candidate_7010"].to_numpy()
-
     ids, roster, hybrid, symmetric = fit_independent_experts(data_dir)
-    if not np.array_equal(baseline_probabilities["battle_id"].to_numpy(), ids):
-        raise ValueError("Baseline and expert test IDs are not aligned")
-    if not all(np.isfinite(values).all() for values in (
-        base, roster, hybrid, symmetric
-    )):
-        raise ValueError("Non-finite model predictions")
-    new_labels = apply_unanimity_gate(base, roster, hybrid, symmetric)
+    submissions = assemble_submissions(
+        baseline_probabilities, ids, roster, hybrid, symmetric
+    )
 
-    output = pd.DataFrame({
-        "battle_id": ids,
-        "player_won": new_labels,
-    })
-    validate_submission(output, data_dir / "sample_submission.csv")
+    sample_path = data_dir / "sample_submission.csv"
+    for frame in submissions.values():
+        validate_submission(frame, sample_path)
+    return submissions
 
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    output.to_csv(args.output, index=False)
+
+def write_submissions(
+    submissions: dict[str, pd.DataFrame], output_dir: Path
+) -> dict[str, Path]:
+    """Write three independently uploadable Kaggle-ready CSV files."""
+    missing = set(SUBMISSION_FILES).difference(submissions)
+    if missing:
+        raise ValueError(f"Missing selected submissions: {sorted(missing)}")
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_paths = {}
+    for name in SUBMISSION_FILES:
+        path = output_dir / name
+        submissions[name].to_csv(path, index=False)
+        output_paths[name] = path
+    return output_paths
+
+
+def main() -> None:
+    """Rebuild all three final submissions from the organizer's files."""
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--data", type=Path, required=True)
+    parser.add_argument(
+        "--output-dir", type=Path, default=Path("submissions"),
+        help="Directory for the three selected Kaggle submissions.",
+    )
+    parser.add_argument(
+        "--output", type=Path, default=None,
+        help="Optional backwards-compatible extra copy of the consensus CSV.",
+    )
+    args = parser.parse_args()
+
+    submissions = train_selected_submissions(args.data.resolve())
+    output_paths = write_submissions(submissions, args.output_dir)
+
+    if args.output is not None:
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        submissions[SUBMISSION_FILES[-1]].to_csv(args.output, index=False)
+
+    final = submissions[SUBMISSION_FILES[-1]]["player_won"].to_numpy()
+    full = submissions[SUBMISSION_FILES[1]]["player_won"].to_numpy()
     print(json.dumps({
-        "output": str(args.output),
-        "rows": len(output),
-        "baseline_decisions_overridden": int(
-            np.sum(new_labels != (base > 0.5))
-        ),
+        "submissions": [str(output_paths[name]) for name in SUBMISSION_FILES],
+        "rows_per_submission": len(final),
+        "baseline_decisions_overridden": int(np.sum(final != full)),
     }, indent=2))
 
 
