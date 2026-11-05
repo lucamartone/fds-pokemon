@@ -7,7 +7,7 @@ No cached predictions, external databases or test labels are required.
 
 Usage:
     python run.py --data /path/to/official-data \
-        --output submissions/submission.csv
+        --output-dir submissions
 """
 
 from __future__ import annotations
