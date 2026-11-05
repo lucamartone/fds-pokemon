@@ -1,10 +1,8 @@
-"""Rebuild the candidate-7010 Kaggle submission from official competition data.
+"""Frozen boosted-tree baseline used inside the maintained consensus ensemble.
 
-The 70.10% result is an exploratory five-fold out-of-fold accuracy, not a
-measured public leaderboard score. No cached predictions are needed.
-
-Usage:
-    python candidate_7010/run.py --data /path/to/competition/files
+The baseline has 70.10% exploratory five-fold OOF accuracy; its public
+Kaggle result was 69.733%. It is refit entirely from official data.
+The maintained entrypoint is python run.py in the repository root.
 """
 
 from __future__ import annotations
@@ -310,7 +308,7 @@ def main() -> None:
     parser.add_argument(
         "--output",
         type=Path,
-        default=Path("submission_candidate_7010.csv"),
+        default=Path("submission_baseline.csv"),
         help="Destination for the Kaggle-ready binary submission.",
     )
     parser.add_argument(

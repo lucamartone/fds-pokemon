@@ -1,11 +1,11 @@
-"""Run the maintained candidate 7010 using the official competition files.
+"""Reproduce the maintained unanimous-expert prediction pipeline.
 
 Example:
     python run.py --data /path/to/official-data \
-        --output submissions/submission_candidate_7010.csv
+        --output submissions/submission.csv
 """
 
-from pokemon.pipeline import main
+from pokemon.consensus import main
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-"""Unit tests for official-data-only candidate 7010 feature generation."""
+"""Unit tests for official-data-only baseline feature generation."""
 
 from __future__ import annotations
 
@@ -88,7 +88,7 @@ def sample_species():
     return species
 
 
-class CandidateFeatureTests(unittest.TestCase):
+class BaselineFeatureTests(unittest.TestCase):
     """Validate dimensions, fixed column order and label independence."""
 
     def setUp(self):
